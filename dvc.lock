@@ -1,0 +1,37 @@
+schema: '2.0'
+stages:
+  train:
+    cmd: python -m training.train --no-mlflow --out artifacts/dvc
+    deps:
+    - path: data/raw/dataset.csv
+      hash: md5
+      md5: bfa7a20347006b0d0bad2f6fc32f66ca
+      size: 121955
+    - path: training/pipeline.py
+      hash: md5
+      md5: 010eb11f688480b2a5b6145de79c863d
+      size: 7457
+    - path: training/train.py
+      hash: md5
+      md5: ec6d15542a4ba71c9fdd30dda1d8ee8b
+      size: 2733
+    params:
+      params.yaml:
+        data.version: v2
+        quality_gate.f1_threshold: 0.9
+        train.C: 1.0
+        train.max_iter: 500
+    outs:
+    - path: artifacts/dvc/data
+      hash: md5
+      md5: 3689860d22fba5ab9bb5c06e078e5756.dir
+      size: 122448
+      nfiles: 2
+    - path: artifacts/dvc/metrics.json
+      hash: md5
+      md5: a535a95dacd16751fa931d28c2185fae
+      size: 193
+    - path: artifacts/dvc/model.joblib
+      hash: md5
+      md5: dc22c48363a7da026ebdc737466289da
+      size: 3073
