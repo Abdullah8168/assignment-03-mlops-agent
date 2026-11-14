@@ -1,0 +1,22 @@
+# secrets
+.env
+*.kubeconfig
+kubeconfig*
+
+# python
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# generated artifacts
+artifacts/
+mlruns/
+mlartifacts/
+serving/model/
+logs/
+
+# data is tracked by DVC, not git
+/data/raw/corrupted.csv

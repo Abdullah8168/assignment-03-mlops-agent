@@ -1,0 +1,10 @@
+.venv
+.git
+.dvc/cache
+artifacts
+data
+tests
+docs
+screenshots
+.env
+**/__pycache__
