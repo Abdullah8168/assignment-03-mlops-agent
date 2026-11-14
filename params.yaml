@@ -1,5 +1,5 @@
 data:
-  version: v1
+  version: v2
   path: data/raw/dataset.csv
 train:
   C: 1.0
