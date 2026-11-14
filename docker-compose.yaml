@@ -1,0 +1,81 @@
+# Local MLOps stack: MLflow tracking server + Apache Airflow 3 (standalone, LocalExecutor, Postgres).
+#   docker compose up -d
+#   MLflow  -> http://localhost:5000
+#   Airflow -> http://localhost:8080   (user: admin, password: $AIRFLOW_PASSWORD from .env)
+name: mlops-agent
+
+services:
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v${MLFLOW_VERSION:-3.18.0}
+    command: >
+      mlflow server --host 0.0.0.0 --port 5000
+      --backend-store-uri sqlite:////mlflow/mlflow.db
+      --artifacts-destination /mlflow/artifacts --serve-artifacts
+      --allowed-hosts "localhost,localhost:5000,127.0.0.1:5000,mlflow,mlflow:5000"
+    ports:
+      - "5000:5000"
+    volumes:
+      - mlflow-data:/mlflow
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health')"]
+      interval: 10s
+      retries: 10
+
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    volumes:
+      - airflow-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "airflow"]
+      interval: 5s
+      retries: 10
+
+  airflow:
+    image: apache/airflow:${AIRFLOW_VERSION:-3.1.0}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mlflow:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+      AIRFLOW__CORE__LOAD_EXAMPLES: "False"
+      AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "False"
+      AIRFLOW__CORE__AUTH_MANAGER: airflow.api_fastapi.auth.managers.simple.simple_auth_manager.SimpleAuthManager
+      AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_USERS: "admin:admin"
+      AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_PASSWORDS_FILE: /opt/airflow/passwords.json
+      AIRFLOW__API_AUTH__JWT_SECRET: ${AIRFLOW_JWT_SECRET:?set AIRFLOW_JWT_SECRET in .env}
+      AIRFLOW__DAG_PROCESSOR__REFRESH_INTERVAL: "30"
+      AIRFLOW_ADMIN_PASSWORD: ${AIRFLOW_PASSWORD:?set AIRFLOW_PASSWORD in .env}
+      # Training code + data are mounted from this repo
+      PROJECT_DIR: /opt/project
+      PYTHONPATH: /opt/project
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+      MLFLOW_EXPERIMENT_NAME: breast-cancer-classifier
+      REGISTERED_MODEL_NAME: breast-cancer-classifier
+      GIT_CONFIG_COUNT: "1"
+      GIT_CONFIG_KEY_0: safe.directory
+      GIT_CONFIG_VALUE_0: "*"
+      _PIP_ADDITIONAL_REQUIREMENTS: "mlflow-skinny==${MLFLOW_VERSION:-3.18.0} scikit-learn==${SKLEARN_VERSION:-1.9.1} pandas joblib"
+    command: >
+      bash -c 'echo "{\"admin\": \"$${AIRFLOW_ADMIN_PASSWORD}\"}" > /opt/airflow/passwords.json
+      && exec airflow standalone'
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - .:/opt/project
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost:8080/api/v2/monitor/health"]
+      interval: 15s
+      retries: 20
+      start_period: 60s
+
+volumes:
+  mlflow-data:
+  airflow-db:
