@@ -1,0 +1,8 @@
+data:
+  version: v1
+  path: data/raw/dataset.csv
+train:
+  C: 1.0
+  max_iter: 500
+quality_gate:
+  f1_threshold: 0.9

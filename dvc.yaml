@@ -1,0 +1,18 @@
+stages:
+  train:
+    cmd: python -m training.train --no-mlflow --out artifacts/dvc
+    deps:
+      - data/raw/dataset.csv
+      - training/pipeline.py
+      - training/train.py
+    params:
+      - data.version
+      - train.C
+      - train.max_iter
+      - quality_gate.f1_threshold
+    outs:
+      - artifacts/dvc/model.joblib
+      - artifacts/dvc/data
+    metrics:
+      - artifacts/dvc/metrics.json:
+          cache: false
