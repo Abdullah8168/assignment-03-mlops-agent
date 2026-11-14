@@ -1,0 +1,38 @@
+# Least-privilege identity for the agent when it runs inside the cluster.
+# Read access to the ML namespace + the two write verbs the confirmation-gated tools need
+# (patch deployments for restart, patch deployments/scale). Nothing cluster-wide.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: mlops-agent
+  namespace: ml-serving
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: mlops-agent
+  namespace: ml-serving
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "pods/log", "services", "endpoints", "events", "configmaps"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "replicasets"]
+    verbs: ["get", "list", "watch", "patch"]
+  - apiGroups: ["apps"]
+    resources: ["deployments/scale"]
+    verbs: ["get", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: mlops-agent
+  namespace: ml-serving
+subjects:
+  - kind: ServiceAccount
+    name: mlops-agent
+    namespace: ml-serving
+roleRef:
+  kind: Role
+  name: mlops-agent
+  apiGroup: rbac.authorization.k8s.io

@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: prediction-api
+  namespace: ml-serving
+  labels:
+    app: prediction-api
+spec:
+  type: ClusterIP
+  selector:
+    app: prediction-api
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      protocol: TCP
