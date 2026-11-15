@@ -201,7 +201,16 @@ def _flatten_log(content: Any) -> list[str]:
     lines: list[str] = []
     for item in content or []:
         if isinstance(item, dict):
-            lines.append(" ".join(str(item.get(k, "")) for k in ("timestamp", "level", "event") if item.get(k)))
+            # Airflow 3 structured log entry; exceptions live in error_detail[].exc_type / exc_value
+            level = str(item.get("level", "")).upper()
+            lines.append(" ".join(x for x in (item.get("timestamp"), level, str(item.get("event", ""))) if x))
+            for detail in item.get("error_detail") or []:
+                if isinstance(detail, dict):
+                    lines.append(f"{level or 'ERROR'} {detail.get('exc_type')}: {detail.get('exc_value')}")
+                    frames = detail.get("frames") or []
+                    if frames:
+                        last = frames[-1]
+                        lines.append(f"  at {last.get('filename')}:{last.get('lineno')} in {last.get('name')}")
         elif isinstance(item, list | tuple):  # Airflow 2 style [(host, text)]
             lines.extend(str(item[-1]).splitlines())
         else:
@@ -218,13 +227,22 @@ def get_task_logs(params: TaskLogInput) -> dict[str, Any]:
             "GET", f"/dags/{_q(params.dag_id)}/dagRuns/{_q(run_id)}/taskInstances/{_q(params.task_id)}"
         )
         try_number = max(int(ti.get("try_number") or 1), 1)
-    log = client.request(
-        "GET",
-        f"/dags/{_q(params.dag_id)}/dagRuns/{_q(run_id)}/taskInstances/{_q(params.task_id)}/logs/{try_number}",
-        params={"full_content": "true"},
-    )
+    try:
+        log = client.request(
+            "GET",
+            f"/dags/{_q(params.dag_id)}/dagRuns/{_q(run_id)}/taskInstances/{_q(params.task_id)}/logs/{try_number}",
+            params={"full_content": "true"},
+        )
+    except ToolError:
+        return {
+            "dag_id": params.dag_id, "dag_run_id": run_id, "task_id": params.task_id, "try_number": try_number,
+            "error_lines": [], "tail": [],
+            "note": f"no log exists for try {try_number}: the task process never started (executor-level failure, "
+                    "e.g. worker could not be launched) - check scheduler logs / resources",
+        }
     lines = [ln for ln in _flatten_log(log.get("content")) if ln.strip()]
-    error_lines = [ln for ln in lines if any(k in ln for k in ("ERROR", "Error", "Exception", "FAILED", "Traceback"))]
+    error_lines = [ln for ln in lines if any(k in ln for k in ("ERROR", "Error", "Exception", "FAILED", "Traceback",
+                                                                 "  at "))]
     return {
         "dag_id": params.dag_id,
         "dag_run_id": run_id,
