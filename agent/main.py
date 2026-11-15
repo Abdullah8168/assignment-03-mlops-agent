@@ -29,6 +29,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("question", nargs="*", help="question to ask (omit for interactive mode)")
     parser.add_argument("--offline", action="store_true", help="use the rule-based planner instead of Claude")
     args = parser.parse_args(argv)
+    for stream in (sys.stdout, sys.stderr):  # Windows consoles default to cp1252
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8", errors="replace")
 
     agent = MLOpsAgent(llm=make_llm("offline" if args.offline else None))
     if args.question:
