@@ -24,6 +24,14 @@ Answers are grounded: the agent cross-checks values against tool results.
 See [architecture.md §3](../architecture.md#3-tools-and-permissions). `GET /tools` returns the live catalogue.
 
 ## 3. Evidence from each technology
+
+| Screenshot | Shows |
+|---|---|
+| [mlflow_runs.png](../screenshots/mlflow_runs.png) | All 11 runs, failed attempts train-6..8, registry versions v1 (train-1) and v2 (train-9) |
+| [mlflow_run_tags.png](../screenshots/mlflow_run_tags.png) | train-10 provenance tags: data.version v1, data.git_commit 7cd893a, data.git_tag data-v1, separate code.git_commit, quality gate passed |
+| [airflow_runs.png](../screenshots/airflow_runs.png) | 3 real DAG runs: skops failure, full success, injected quality-gate failure |
+| [airflow_quality_gate_failed.png](../screenshots/airflow_quality_gate_failed.png) | quality_gate Failed and promote_model Upstream Failed: the weak model was not promoted |
+
 Raw outputs are in [evidence/raw_system_evidence.md](../evidence/raw_system_evidence.md) (DVC tags/status/.dvc files,
 `kubectl get/describe`, docker services).
 
