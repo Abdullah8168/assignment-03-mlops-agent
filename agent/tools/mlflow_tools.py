@@ -17,7 +17,8 @@ os.environ.setdefault("MLFLOW_HTTP_REQUEST_MAX_RETRIES", "0")
 os.environ.setdefault("MLFLOW_HTTP_REQUEST_TIMEOUT", "10")
 
 PROVENANCE_TAGS = (
-    "data.version", "data.git_commit", "data.dvc_md5", "data.path", "data.rows",
+    "data.version", "data.git_commit", "data.git_tag", "data.dvc_md5", "data.path", "data.provenance_check",
+    "code.git_commit",
     "pipeline.dag_id", "pipeline.dag_run_id", "quality_gate.status", "quality_gate.reason",
 )
 _client_override: Any = None

@@ -20,7 +20,11 @@ from training.provenance import PROJECT_ROOT, get_data_provenance
 
 
 def main(argv: list[str] | None = None) -> int:
-    params = yaml.safe_load((PROJECT_ROOT / "params.yaml").read_text())
+    # MLflow prints emoji; the default Windows console encoding (cp1252) cannot encode them
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8", errors="replace")
+    params =yaml.safe_load((PROJECT_ROOT / "params.yaml").read_text())
     parser = argparse.ArgumentParser()
     parser.add_argument("--data", default=params["data"]["path"])
     parser.add_argument("--C", type=float, default=params["train"]["C"])
